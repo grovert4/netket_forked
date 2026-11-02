@@ -64,3 +64,9 @@ def _random_state_box(hilb: Particle, key, batches: int, dtype):
 
     width = min_modulus / (4.0 * hilb.n_particles)
     # The width gives the noise level. In the periodic case the
+
+@dispatch
+def random_state(hilb: Particle, key, batches: int, *, dtype):
+    if isinstance(hilb.geometry, SphereN):
+        return _random_state_sphere(hilb, key, batches, dtype)
+    return _random_state_box(hilb, key, batches, dtype)
