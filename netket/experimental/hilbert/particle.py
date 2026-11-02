@@ -13,6 +13,7 @@
 # limitations under the License.
 from .continuous_hilbert import ContinuousHilbert
 from netket.experimental.geometry import Cell
+from netket.experimental.geometry import SphereN
 
 
 class Particle(ContinuousHilbert):
@@ -23,7 +24,7 @@ class Particle(ContinuousHilbert):
         self,
         N: int | tuple[int, ...],
         *,
-        geometry: Cell,
+        geometry: Cell | SphereN,
     ) -> None:
         """
         Constructs new ``Particles`` given specifications
@@ -38,9 +39,9 @@ class Particle(ContinuousHilbert):
         if not hasattr(N, "__len__"):
             N = (N,)
 
-        if not isinstance(geometry, Cell):
+        if not isinstance(geometry, Cell | SphereN):
             raise TypeError(
-                "`geometry` must be an instance of `netket.experimental.geometry.Cell`."
+                "`geometry` must be an instance of `netket.experimental.geometry.Cell` or 'netket.experimental.geometry.SphereN'."
             )
 
         self._N = sum(N)

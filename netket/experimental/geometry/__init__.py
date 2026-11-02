@@ -6,3 +6,4 @@ __all__ = [
 ]
 
 from .cell import Cell, FreeSpace
+from .SphereN import SphereN
