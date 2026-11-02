@@ -17,6 +17,7 @@ from jax import numpy as jnp
 import numpy as np
 
 from netket import jax as nkjax
+from netket.experimental.geometry import SphereN
 from netket.experimental.hilbert import ContinuousHilbert, Particle
 from netket.utils.dispatch import dispatch
 
@@ -29,15 +30,20 @@ def take_sub(key, x, n):
     return x[ind, :]
 
 
-@dispatch
-def random_state(hilb: Particle, key, batches: int, *, dtype):
-    """If no periodic boundary conditions are present particles are positioned normally distributed around the origin.
+def _random_state_sphere(hilb: Particle, key, batches: int, dtype):
+    """Uniformly distributed points on S^n: normalized Gaussian vectors."""
+    dim = hilb.geometry.embedding_dimension
+    gaussian = jax.random.normal(
+        key,
+        shape=(batches, hilb.n_particles, dim),
+        dtype=nkjax.dtype_real(dtype),
+    )
+    norm = jnp.linalg.norm(gaussian, axis=-1, keepdims=True)
+    points = gaussian / norm
+    return jnp.asarray(points.reshape(batches, hilb.size), dtype=dtype)
 
-    If periodic boundary conditions are present the particles are positioned uniformly inside the box and a small
-    gaussian noise is added on top.
-    If periodic boundary conditions are chosen only for certain dimensions, the periodic initialization is used for
-    all of those dimensions and the free initialization is used for all the other ones.
-    """
+
+def _random_state_box(hilb: Particle, key, batches: int, dtype):
     pbc = np.array(hilb.n_particles * hilb.geometry.pbc)
     boundary = np.tile(pbc, (batches, 1))
 
@@ -58,33 +64,3 @@ def random_state(hilb: Particle, key, batches: int, *, dtype):
 
     width = min_modulus / (4.0 * hilb.n_particles)
     # The width gives the noise level. In the periodic case the
-    # particles are evenly distributed between 0 and min(L). The
-    # distance between the particles coordinates is therefore given by
-    # min(L) / hilb.N. To avoid particles to have coincident
-    # positions the noise level should be smaller than half this distance.
-    # We choose width = min(L) / (4*hilb.N)
-    noise = gaussian * width
-
-    key = jax.random.split(key, num=batches)
-    sdim = len(hilb.domain)
-    n = int(np.ceil(hilb.n_particles ** (1 / sdim)))
-    xs = jnp.linspace(0, min(hilb.domain), n)
-    uniform = jnp.array(jnp.meshgrid(*(sdim * [xs]))).reshape(-1, sdim)
-    uniform = jnp.tile(uniform, (batches, 1, 1))
-
-    uniform = jax.vmap(take_sub, in_axes=(0, 0, None))(
-        key, uniform, hilb.n_particles
-    ).reshape(batches, -1)
-    rs = jnp.where(np.equal(boundary, False), gaussian, (uniform + noise) % modulus)
-
-    return jnp.asarray(rs, dtype=dtype)
-
-
-@dispatch
-def flip_state_scalar(hilb: ContinuousHilbert, key, x, i):
-    raise TypeError(
-        "Flipping state is undefined for continuous Hilbert spaces. "
-        "(Maybe you tried using `MetropolisLocal` on a continuous Hilbert space? "
-        "This won't work because 'flipping' a continuous variable is not defined. "
-        "You should try a different sampler.)"
-    )

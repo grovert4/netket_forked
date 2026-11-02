@@ -3,6 +3,7 @@
 __all__ = [
     "Cell",
     "FreeSpace",
+    "SphereN"
 ]
 
 from .cell import Cell, FreeSpace
