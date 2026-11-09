@@ -70,3 +70,12 @@ def random_state(hilb: Particle, key, batches: int, *, dtype):
     if isinstance(hilb.geometry, SphereN):
         return _random_state_sphere(hilb, key, batches, dtype)
     return _random_state_box(hilb, key, batches, dtype)
+
+@dispatch
+def flip_state_scalar(hilb: ContinuousHilbert, key, x, i):
+    raise TypeError(
+        "Flipping state is undefined for continuous Hilbert spaces. "
+        "(Maybe you tried using `MetropolisLocal` on a continuous Hilbert space? "
+        "This won't work because 'flipping' a continuous variable is not defined. "
+        "You should try a different sampler.)"
+    )

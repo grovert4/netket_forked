@@ -11,48 +11,49 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import numpy as np
+
+from netket.experimental.geometry import Cell, SphereN
+
 from .continuous_hilbert import ContinuousHilbert
-from netket.experimental.geometry import Cell
-from netket.experimental.geometry import SphereN
 
 
 class Particle(ContinuousHilbert):
     r"""Hilbert space derived from ContinuousHilbert defining N particles
-    in continuous space with or without periodic boundary conditions."""
+    in continuous space, either in a box (:class:`~netket.experimental.geometry.Cell`)
+    or on a sphere (:class:`~netket.experimental.geometry.SphereN`)."""
 
-    def __init__(
-        self,
-        N: int | tuple[int, ...],
-        *,
-        geometry: Cell | SphereN,
-    ) -> None:
-        """
-        Constructs new ``Particles`` given specifications
-        of the continuous space they are defined in.
-
-        Args:
-            N: Number of particles. If int all have the same spin. If Tuple the entry indicates how many particles
-                there are with a certain spin-projection.
-            geometry: Instance of :class:`~netket.experimental.geometry.Cell` defining the geometry.
-        """
-
+    def __init__(self, N: int | tuple[int, ...], *, geometry: Cell | SphereN) -> None:
         if not hasattr(N, "__len__"):
             N = (N,)
 
-        if not isinstance(geometry, Cell | SphereN):
+        if not isinstance(geometry, (Cell, SphereN)):
             raise TypeError(
-                "`geometry` must be an instance of `netket.experimental.geometry.Cell` or 'netket.experimental.geometry.SphereN'."
+                "`geometry` must be an instance of `netket.experimental.geometry.Cell` "
+                "or `netket.experimental.geometry.SphereN`."
             )
 
         self._N = sum(N)
         self._n_per_spin = N
         self._geometry = geometry
 
-        super().__init__(geometry.extent)
+        if isinstance(geometry, Cell):
+            domain = geometry.extent
+        else:
+            # Placeholder: only encodes the number of coordinates per particle (n + 1)
+            domain = (np.inf,) * geometry.embedding_dimension
+
+        super().__init__(domain)
+
+    @property
+    def _coords_per_particle(self) -> int:
+        if isinstance(self._geometry, Cell):
+            return len(self._geometry.extent)
+        return self._geometry.embedding_dimension
 
     @property
     def size(self) -> int:
-        return self._N * len(self.domain)
+        return self._N * self._coords_per_particle
 
     @property
     def n_particles(self) -> int:
@@ -61,16 +62,7 @@ class Particle(ContinuousHilbert):
 
     @property
     def n_per_spin(self) -> tuple[int, ...]:
-        r"""Gives the number of particles in a specific spin
-        projection.
-
-        The length of this tuple indicates the total spin whereas
-        the position in the tuple indicates the spin projection.
-
-        Example: (10,5,3) describes 18 particles of total spin 1
-        where 10 of those have spin-projection -1, 5 have
-        spin-projection 0 and 3 have spin-projection 1.
-        """
+        r"""Number of particles in each spin projection."""
         return self._n_per_spin
 
     @property
@@ -83,4 +75,4 @@ class Particle(ContinuousHilbert):
         return (self._N, self.geometry)
 
     def __repr__(self):
-        return f"Particle(N={self.n_particles}, d={len(self.domain)})"
+        return f"Particle(N={self.n_particles}, geometry={self.geometry})"
