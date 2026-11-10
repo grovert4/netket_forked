@@ -65,6 +65,7 @@ def su2_frame(q: Array) -> Array:
 
     ``A^x, A^y, A^z`` are ``i*q, j*q, k*q`` (quaternion left multiplication).
     """
+        
     q0, q1, q2, q3 = q[..., 0], q[..., 1], q[..., 2], q[..., 3]
     ax = jnp.stack([-q1,  q0, -q3,  q2], axis=-1)   # i * q
     ay = jnp.stack([-q2,  q3,  q0, -q1], axis=-1)   # j * q
